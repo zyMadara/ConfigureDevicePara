@@ -98,6 +98,8 @@ namespace ConfigureDevicePara
                 serialPort.DataBits = 8;
                 serialPort.StopBits = StopBits.One;
 
+                serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialPort_DataReceived);
+
                 try
                 {
                     serialPort.Open();
@@ -127,6 +129,34 @@ namespace ConfigureDevicePara
                 el_Stat.Fill = Brushes.Red;
             }
 
+        }
+
+        private void SerialPort_DataReceived(object sender, SerialDataReceivedEventArgs e)
+        {
+            try
+            {
+                if (serialPort.BytesToRead <=0)
+                {
+                    return;
+                }
+
+                byte[] readbuff = new byte[serialPort.BytesToRead];
+
+                serialPort.Read(readbuff, 0, readbuff.Length);
+
+                if (Encoding.ASCII.GetString(readbuff).Contains("Configuration"))
+                {
+                    this.tb_Recv.Dispatcher.Invoke(new Action(() =>
+                    {
+                        tb_Recv.Text += Encoding.ASCII.GetString(readbuff);
+                    }));
+                }
+
+            }
+            catch(Exception ex)
+            {
+                tb_Recv.Text += ex.ToString();
+            }
         }
 
         private void Btn_Check_Click(object sender, RoutedEventArgs e)
@@ -178,9 +208,33 @@ namespace ConfigureDevicePara
         //    return t;
         //}
 
+        private UInt16 CRC16(byte[] src, UInt16 length)
+        {
+            UInt16 Reg_CRC = 0xffff;
+            byte i, j;
+
+            for (i = 0; i < length; i++)
+            {
+                Reg_CRC ^= src[i];
+                for (j = 0; j < 8; j++)
+                {
+                    if (0x0001 == (Reg_CRC & 0x0001))
+                    {
+                        Reg_CRC >>= 1;
+                        Reg_CRC ^= 0xa001;
+                    }
+                    else
+                    {
+                        Reg_CRC >>= 1;
+                    }
+                }
+            }
+            return Reg_CRC;
+        }
+
         private void Btn_Send_Click(object sender, RoutedEventArgs e)
         {
-            byte[] sendBuff = new byte[53];
+            byte[] sendBuff = new byte[53 + 2];
 
             IPAddress iPAddress = null; //IPAddress.Parse(tb_UpdateIP.Text);
             UInt16 port = 0;// UInt16.Parse(tb_UpdatePort.Text);
@@ -298,7 +352,14 @@ namespace ConfigureDevicePara
                 str += tb_ST.Text + " " + tb_PWD.Text + " " + tb_ID.Text + " " + tb_MN.Text + "\r\n";
             }
 
+            UInt16 crc16 = CRC16(sendBuff, 53);
+
+            sendBuff[53] = (byte)(crc16 & 0xff);
+            sendBuff[54] = (byte)(crc16 >> 8); 
+
             tb_Recv.Text = str + tb_Recv.Text;
+
+            serialPort.Write(sendBuff, 0, sendBuff.Length);
         }
 
         private void Btn_Clear_Click(object sender, RoutedEventArgs e)

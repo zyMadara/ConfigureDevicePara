@@ -12,7 +12,7 @@
             <ColumnDefinition Width="73*"/>
         </Grid.ColumnDefinitions>
         <ComboBox x:Name="ComBoxPort" Margin="67,9,170,0" VerticalAlignment="Top" SelectedIndex="0" />
-        <ComboBox x:Name="ComBoxBaudRate" Margin="67,35,170,0" VerticalAlignment="Top" SelectedIndex="0">
+        <ComboBox x:Name="ComBoxBaudRate" Margin="67,35,170,0" VerticalAlignment="Top" SelectedIndex="1">
             <ComboBoxItem Content="9600"/>
             <ComboBoxItem Content="115200"/>
         </ComboBox>
